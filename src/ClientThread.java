@@ -18,6 +18,8 @@ public class ClientThread extends Thread
 	public String _myName = "";
 	public String _hostname = "";
 	public String _portnum = "";
+	private InetAddress _address;
+	private int _port;
 	
 	//relog gui
 	private JFrame _relogFrame;
@@ -47,9 +49,7 @@ public class ClientThread extends Thread
 	 */
 	public void run()
 	{
-		InetAddress address;
-		int port = -1;
-		int state = 0;
+		int state = 1;
 		
 		try 
 		{
@@ -57,15 +57,34 @@ public class ClientThread extends Thread
 						
 			_sendBuf = new byte[_socket.getSendBufferSize()];
 			_recBuf = new byte[_socket.getReceiveBufferSize()];
-						
-			address = _socket.getInetAddress();
-			port = _socket.getPort();
-			_user = new User(_myName, address, port);
+			
+			_address = _socket.getInetAddress();
+			_port = _socket.getPort();
+			_user = new User(_myName, _address, _port);
 			
 			_sendBuf = toByteArray(_user);
 			_socket.getOutputStream().write(Message.USER);
 			_socket.getOutputStream().write(_sendBuf);
 			_socket.getOutputStream().flush();
+			
+			state = _socket.getInputStream().read();
+			
+			while (state == 200)
+			{
+				buildRelog();
+				state = _socket.getInputStream().read();
+				System.out.println(state);
+				_relogFrame.dispose();
+				
+				if (state != 200)
+				{
+					break;
+				}
+			}
+
+			Client._mainFrame.setTitle("Cr@p Talk: " + _myName);
+			Client._mainFrame.setVisible(true);
+			
 			
 			while(true)
 			{
@@ -110,7 +129,7 @@ public class ClientThread extends Thread
 					}
 					else if (state == Message.SERVERDOWN)
 					{
-						JOptionPane.showMessageDialog(null, "Server has gone down like me on your mom...");
+						JOptionPane.showMessageDialog(null, "Server has gone down...");
 						System.exit(0);
 					}
 					else if (state == Message.ERROR)
@@ -178,13 +197,14 @@ public class ClientThread extends Thread
 							try
 							{
 								_myName = _nameField.getText().trim();
-								Client._userName = _nameField.getText().trim();
-								_sendBuf = toByteArray(_myName);
-								_socket.getOutputStream().write(Message.NAME);
-								_socket.getOutputStream().write(_sendBuf);
-								_socket.getOutputStream().flush();
+								Client._userName = _myName;
+								_user = new User(_myName, _address, _port);
 								
-								_relogFrame.dispose();
+								_sendBuf = toByteArray(_user);
+								_socket.getOutputStream().write(Message.USER);
+								_socket.getOutputStream().write(_sendBuf);
+								_socket.getOutputStream().flush();		
+								
 							}
 							catch (Exception e)
 							{
@@ -198,6 +218,7 @@ public class ClientThread extends Thread
 		
 		_relogFrame.setVisible(true);
 	}
+	
 	
 	/**
 	 * Method that is run when the send button is pressed.

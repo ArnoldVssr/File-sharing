@@ -39,22 +39,39 @@ public class ServerThread extends Thread
         	int state;
         	
         	_sendBuf = new byte[_socket.getSendBufferSize()];
-        	_recBuf = new byte[_socket.getReceiveBufferSize()];
-        	state = _socket.getInputStream().read();
+        	_recBuf = new byte[_socket.getReceiveBufferSize()];        	
         	
-    		if (state == Message.USER)
-    		{
-    			Server.prevLen = Server.users.size();
-	        	_socket.getInputStream().read(_recBuf);
-				_currentUser = (User) toObject(_recBuf);
-					
-				Server.users.add(_currentUser);
-				Server.Maptest.put(_currentUser.getName(),_socket);
-				Server.usernames.add(_currentUser.getName());
-				Server.curLen = Server.users.size();
-				System.err.println("added: " + _currentUser.getName());
-    		}
-			
+        	while (true)
+        	{
+        		state = _socket.getInputStream().read();
+        		
+	        	if (state == Message.USER)
+	    		{
+		        	_socket.getInputStream().read(_recBuf);
+					_currentUser = (User) toObject(_recBuf);
+		        	
+					if (Server.users.contains(_currentUser))
+					{
+						Server._serverLog.append("Not unique.\n");
+						_socket.getOutputStream().write(200);
+						_socket.getOutputStream().flush();
+					}
+					else
+					{
+						Server._serverLog.append("Unique.\n");
+			        	Server.users.add(_currentUser);
+						Server.Maptest.put(_currentUser.getName(),_socket);
+						Server.usernames.add(_currentUser.getName());
+						Server.curLen = Server.users.size();
+						System.out.println("added: " + _currentUser.getName());
+						
+						_socket.getOutputStream().write(500);
+						_socket.getOutputStream().flush();
+						break;
+					}
+	    		}
+        	}
+        	
         	while(true)
         	{
         		PrintUsers();
@@ -67,7 +84,7 @@ public class ServerThread extends Thread
         			Socket rec = Server.Maptest.get(Temp.getRecipient());
         			_sendBuf = toByteArray(Temp);
         			
-        			Server._serverLog.append(Temp.getOrigin() + " -> " + Temp.getRecipient());
+        			Server._serverLog.append(Temp.getOrigin() + " -> " + Temp.getRecipient() + "./n");
         			
         			if (Temp.getRecipient().equalsIgnoreCase(Temp.getOrigin()))
         			{

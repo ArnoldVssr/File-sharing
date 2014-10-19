@@ -16,9 +16,9 @@ public class Client implements ActionListener
 	private String _portNumber = "";
 	
 	//login gui
-	private JFrame _loginFrame;
+	public static JFrame _loginFrame;
 	private JLabel _usernameLabel;
-	private JTextField _usernameField;
+	public static JTextField _usernameField;
 	private JLabel _portLabel;
 	private JTextField _portField;
 	private JLabel _hostLabel;
@@ -75,7 +75,6 @@ public class Client implements ActionListener
 		try
 		{			
 			_loginFrame.setVisible(false);
-			_mainFrame.setVisible(true);
 			
 			_myClient = new ClientThread(_userName, _hostName, _portNumber);
 			_myClient.start();
