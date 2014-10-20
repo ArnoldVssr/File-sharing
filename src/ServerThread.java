@@ -1,6 +1,8 @@
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
 import java.util.Map;
+import java.util.concurrent.locks.Lock;
 
 /**
  * 
@@ -14,6 +16,10 @@ public class ServerThread extends Thread
 	private static byte[] _sendBuf = null;
 	private static byte[] _recBuf = null;
     private static User _currentUser = new User();
+    private static String fileToFind = "";
+    private static String personToSend = "";
+    public static final class Lock { }
+    public final static Object lock = new Lock();    
 	
     /**
      * Constructor of the ServerThread.
@@ -63,7 +69,6 @@ public class ServerThread extends Thread
 						Server.Maptest.put(_currentUser.getName(),_socket);
 						Server.usernames.add(_currentUser.getName());
 						Server.curLen = Server.users.size();
-						System.out.println("added: " + _currentUser.getName());
 						
 						_socket.getOutputStream().write(500);
 						_socket.getOutputStream().flush();
@@ -79,6 +84,7 @@ public class ServerThread extends Thread
         		
         		if (state == Message.WHISPER)
         		{
+        			System.out.println("doing whisper");
         			_socket.getInputStream().read(_recBuf);
         			Message Temp = (Message) toObject(_recBuf);
         			Socket rec = Server.Maptest.get(Temp.getRecipient());
@@ -115,6 +121,7 @@ public class ServerThread extends Thread
         		}
         		else if (state == Message.LOBBY)
         		{
+        			System.out.println("doing lobby");
         			_socket.getInputStream().read(_recBuf);
         			Message Temp = (Message) toObject(_recBuf);
         			
@@ -131,8 +138,73 @@ public class ServerThread extends Thread
     					entry.getValue().getOutputStream().flush();
     				}
         		}
+        		else if (state == Message.SEARCH)
+        		{
+        			System.out.println("doing search");
+        			_socket.getInputStream().read(_recBuf);
+        			Message Temp = (Message) toObject(_recBuf);
+        			
+        			Server._serverLog.append(Temp.getOrigin() + " -> searching for " + Temp.getMessage() + ".\n");
+        			fileToFind = Temp.getMessage();
+        			personToSend = Temp.getOrigin();
+        			
+    				for(Map.Entry<String, Socket> entry: Server.Maptest.entrySet())
+    				{
+    					if (!entry.getKey().equals(Temp.getOrigin()))
+    					{
+	    					entry.getValue().getOutputStream().write(Message.SHARED);
+	    					entry.getValue().getOutputStream().flush();
+    					}
+    				}
+        		}
+        		else if (state == Message.TEXT)
+        		{
+        			synchronized (lock)
+        			{
+						while (Server.writeBusy)
+						{
+							lock.wait();
+						}
+						Server.counter++;
+						_socket.getInputStream().read(_recBuf);
+	        			Object[] lines = (Object[]) toObject(_recBuf);
+	        			System.out.println("got data");
+	        			System.out.println("searching for: " + fileToFind);
+	        			System.out.println("forwarding to: " + personToSend);
+	        			for (int i = 0; i < lines.length; i++)
+	        			{
+	        				//wolf-597-1280x800.jpg && /home/arnold/Downloads/wolf-597-1280x800.jpg
+	        				String current = (String) lines[i];
+	        				String[] temp = current.split("&&");
+	        				if (current.contains(fileToFind))
+	        				{
+	        					Server.resultsPath.add(current);
+	        					Server.results.add(temp[0]);
+	        				}
+	        			}
+						Server.writeBusy = false;
+						lock.notifyAll();
+        			}
+        			
+        			if (Server.counter == Server.usernames.size()-1)
+        			{
+        				System.out.println("forwarding results...");
+        				
+        				Socket returnResult = Server.Maptest.get(personToSend);
+        				
+        				_sendBuf = toByteArray(Server.results.toArray());
+        				returnResult.getOutputStream().write(Message.RESULTS);
+        				returnResult.getOutputStream().flush();
+	        			
+        				returnResult.getOutputStream().write(_sendBuf);
+        				returnResult.getOutputStream().flush();
+        				System.out.println("sent results");
+        				
+        			}
+        		}
         		else if (state == Message.HASHSET)
         		{
+        			System.out.println("doing hashset");
         			for(Map.Entry<String, Socket> entry: Server.Maptest.entrySet())
     				{
         				_sendBuf = toByteArray(Message.HASHSET);
@@ -146,6 +218,7 @@ public class ServerThread extends Thread
         		}
         		else if (state == Message.BYE)
         		{
+        			System.out.println("doing bye");
         			_socket.getInputStream().read(_recBuf);
         			Message Temp = (Message) toObject(_recBuf);
         			
@@ -190,6 +263,10 @@ public class ServerThread extends Thread
             e.printStackTrace();
         } 
         catch (ClassNotFoundException e)
+        {
+			e.printStackTrace();
+		}
+        catch (InterruptedException e)
         {
 			e.printStackTrace();
 		}

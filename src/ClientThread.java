@@ -1,6 +1,12 @@
+import java.awt.BorderLayout;
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
+import java.util.Scanner;
+
 import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 
 /**
  * 
@@ -12,6 +18,8 @@ public class ClientThread extends Thread
 {
 	//global variables
 	private static Socket _socket = null;
+	private static ServerSocket _sendSocket;
+	private static Socket _recieveSocket;
 	private static byte[] _sendBuf = null;
 	private byte[] _recBuf = null;
 	public User _user = new User();
@@ -97,6 +105,7 @@ public class ClientThread extends Thread
 				{
 					if (state == Message.HASHSET)
 					{
+						System.out.println("doing hashset");
 						_socket.getInputStream().read(_recBuf);
 						Object[] online = (Object[]) toObject(_recBuf);
 						String[] onlineList = new String[online.length];
@@ -108,6 +117,7 @@ public class ClientThread extends Thread
 					}
 					else if (state == Message.LOBBY)
 					{
+						System.out.println("doing lobby");
 						_socket.getInputStream().read(_recBuf);
 						rec = (Message) toObject(_recBuf);
 						
@@ -115,13 +125,46 @@ public class ClientThread extends Thread
 					}
 					else if (state == Message.WHISPER)
 					{
+						System.out.println("doing whisper");
 						_socket.getInputStream().read(_recBuf);
 						rec = (Message) toObject(_recBuf);
 						
 						Client._chatLog.append("[" + rec.getOrigin() +"(whisp)]: " + rec.getMessage() + "\n");
 					}
+					else if (state == Message.SHARED)
+					{
+						System.out.println("doing shared");
+						ArrayList<String> files = new ArrayList<String>();
+						Scanner file = new Scanner(new File("shared.txt"));
+						
+				        while(file.hasNextLine())           
+				        {
+				            String line = file.nextLine();
+				            files.add(line);
+				        }
+				        _sendBuf = toByteArray(files.toArray());
+				        _socket.getOutputStream().write(Message.TEXT);
+				        _socket.getOutputStream().write(_sendBuf);
+						_socket.getOutputStream().flush();
+						System.out.println("sent data");
+				        
+					}
+					else if (state == Message.RESULTS)
+					{
+						_socket.getInputStream().read(_recBuf);
+	        			Object[] lines = (Object[]) toObject(_recBuf);
+	        			
+	        			String[] mal = new String[lines.length];
+	        			
+	        			for (int i = 0; i < lines.length; i++)
+	        			{
+	        				mal[i] = (String) lines[i];
+	        			}
+	        			buildResultGUI(mal);
+					}
 					else if (state == Message.DC)
 					{
+						System.out.println("doing dc");
 						_socket.getInputStream().read(_recBuf);
 						rec = (Message) toObject(_recBuf);
 						
@@ -129,17 +172,20 @@ public class ClientThread extends Thread
 					}
 					else if (state == Message.SERVERDOWN)
 					{
+						System.out.println("doing serverdown");
 						JOptionPane.showMessageDialog(null, "Server has gone down...");
 						System.exit(0);
 					}
 					else if (state == Message.ERROR)
 					{
+						System.out.println("doing error");
 						_socket.getInputStream().read(_recBuf);
 						rec = (Message) toObject(_recBuf);
 						JOptionPane.showMessageDialog(null, "It's bad to talk to yourself...");
 					}
 					else if (state == Message.REMOVED)
 					{
+						System.out.println("doing doing removed");
 						_socket.getInputStream().read(_recBuf);
 						rec = (Message) toObject(_recBuf);
 						System.exit(0);
@@ -160,6 +206,41 @@ public class ClientThread extends Thread
 		{
 			e.printStackTrace();
 		} 
+	}
+	
+	public void buildResultGUI(String[] results)
+	{
+		JFrame frame = new JFrame("Results of search");
+
+	    DefaultListModel model = new DefaultListModel();
+	    model.ensureCapacity(results.length);
+	    for (int i = 0; i < results.length; i++)
+	    {
+	    	model.addElement(results[i]);
+	    }
+	    JList jlist2 = new JList(model);
+	    jlist2.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+	    ListSelectionListener listener = new ListSelectionListener()
+	    {
+			@Override
+			public void valueChanged(ListSelectionEvent e)
+			{
+				if (!e.getValueIsAdjusting()) {
+					JList source = (JList)e.getSource();
+		            String selected = source.getSelectedValue().toString();
+		            System.out.println("you want: " + selected);
+	            }
+				
+			}
+		};
+	    jlist2.addListSelectionListener(listener);
+
+	    
+	    JScrollPane scrollPane2 = new JScrollPane(jlist2);
+	    frame.add(scrollPane2, BorderLayout.CENTER);
+
+	    frame.setSize(400, 350);
+	    frame.setVisible(true);
 	}
 	
 	/**
@@ -243,6 +324,11 @@ public class ClientThread extends Thread
 			else if (message.getRecipient().equalsIgnoreCase(""))
 			{
 				_socket.getOutputStream().write(Message.LOBBY);
+			}
+			//search request
+			else if (message.getRecipient().equalsIgnoreCase("all"))
+			{
+				_socket.getOutputStream().write(Message.SEARCH);
 			}
 			//whisper message
 			else

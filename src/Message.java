@@ -24,6 +24,11 @@ public class Message implements Serializable
     public static final int ERROR = 8;
     public static final int NAMECHECK = 9;
     public static final int NAME = 10;
+    public static final int SEARCH = 11;
+    public static final int SHARED = 12;
+    public static final int TEXT = 13;
+    public static final int RESULTS = 14;
+    
 	
 	public Message()
     {

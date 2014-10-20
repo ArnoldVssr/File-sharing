@@ -20,8 +20,12 @@ public class Server
     public static HashSet<User> users = new HashSet<User>();
     public static Map<String,Socket> Maptest = new HashMap<String,Socket>();
     public static ArrayList<String> usernames = new  ArrayList<String>();
+    public static ArrayList<String> resultsPath = new  ArrayList<String>();
+    public static ArrayList<String> results = new  ArrayList<String>();
 	public static int prevLen = 0;
 	public static int curLen = 0;
+	public static boolean writeBusy = false;
+	public static int counter = 0;
 	
     
 	public static JFrame _serverFrame = new JFrame();
@@ -40,7 +44,7 @@ public class Server
 	    
 	    
 	    _serverFrame.getContentPane().setLayout(null);
-	    _serverFrame.setSize(350, 200);
+	    _serverFrame.setSize(350, 400);
 	    _serverFrame.setResizable(false);
 	    _serverFrame.setTitle("ServerLogs");
 	    _serverFrame.addWindowListener(
@@ -61,7 +65,7 @@ public class Server
 	    _serverScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
 	    _serverScroll.setViewportView(_serverLog);
 	    _serverFrame.getContentPane().add(_serverScroll);
-		_serverScroll.setBounds(10, 10 , 330, 180);
+		_serverScroll.setBounds(10, 10 , 330, 330);
 	  
 		_serverFrame.setVisible(true);
 	    

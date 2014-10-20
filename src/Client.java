@@ -1,4 +1,11 @@
+import java.awt.BorderLayout;
 import java.awt.event.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+
 import javax.swing.*;
 
 /**
@@ -14,6 +21,7 @@ public class Client implements ActionListener
 	public static String _userName = "";
 	private String _hostName = "";
 	private String _portNumber = "";
+	private PrintWriter out;
 	
 	//login gui
 	public static JFrame _loginFrame;
@@ -26,6 +34,13 @@ public class Client implements ActionListener
 	private JLabel _loginHeader;
 	private JButton _loginButton;
 	
+	//download gui
+	private JFrame _downloadFrame;
+	private JLabel _fileLabel;
+	private JLabel _downloadHeader;
+	private JTextField _fileField;
+	private JButton _searchButton;
+	
 	//main gui
 	public static JFrame _mainFrame;
 	private JLabel _mainHeader;
@@ -34,6 +49,8 @@ public class Client implements ActionListener
 	private JLabel _chatLabel;
 	private JLabel _userLabel;
 	private JButton _sendButton;
+	private JButton _shareButton;
+	private JButton _downloadButton;
 	private JScrollPane _chatScroller;
 	private JScrollPane _onlineScroller;
     private JFileChooser _fileBrowser;
@@ -63,6 +80,14 @@ public class Client implements ActionListener
 	public static void main(String[] args)
 	{
 		Client test = new Client();
+		try {
+			test.out = new PrintWriter("shared.txt");
+			test.out.close();
+		} 
+		catch (FileNotFoundException e)
+		{
+			e.printStackTrace();
+		}
 		test.buildMain();
 	}
 	
@@ -126,10 +151,22 @@ public class Client implements ActionListener
 		_mainFrame.getContentPane().add(_sendButton);
 		_sendButton.setBounds(130, 80, 100, 25);
 		
+		_shareButton = new JButton("Share");
+		_shareButton.addActionListener(this);
+		_mainFrame.getContentPane().add(_shareButton);
+		_shareButton.setBounds(240, 80, 100, 25);
+		
+		_downloadButton = new JButton("Pirate");
+		_downloadButton.addActionListener(this);
+		_mainFrame.getContentPane().add(_downloadButton);
+		_downloadButton.setBounds(350, 80, 100, 25);
+		
 		
 		_userLabel = new JLabel("Online users:");
 		_mainFrame.getContentPane().add(_userLabel);
 		_userLabel.setBounds(550, 20, 130, 25);
+		
+		_userList = new JList();
 		
 		_onlineScroller = new JScrollPane();
 		_onlineScroller.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
@@ -155,9 +192,7 @@ public class Client implements ActionListener
 		_chatScroller.setViewportView(_chatLog);
 		_mainFrame.getContentPane().add(_chatScroller);
 		_chatScroller.setBounds(50, 150 , 450, 180);
-		
-		_userList = new JList();
-		
+			
 		_uploadLabel = new JLabel("Upload:");
 		_mainFrame.getContentPane().add(_uploadLabel);
 		_uploadLabel.setBounds(50, 350, 340, 25);
@@ -234,6 +269,33 @@ public class Client implements ActionListener
 		
 	}
 	
+	public void buildDownloadGUI()
+	{
+		_downloadFrame= new JFrame("Search for Booty");
+		_downloadFrame.setSize(400,200);
+		_downloadFrame.setLayout(null);
+		_downloadFrame.setResizable(false);
+		
+		_downloadHeader = new JLabel("Insert filename to search for.");
+		_downloadFrame.getContentPane().add(_downloadHeader);
+		_downloadHeader.setBounds(100, 10, 340, 25);
+		
+		_fileLabel = new JLabel("Filename:");
+		_downloadFrame.getContentPane().add(_fileLabel);
+		_fileLabel.setBounds(15, 60, 100, 25);
+		
+		_fileField = new JTextField(30);
+		_downloadFrame.getContentPane().add(_fileField);
+		_fileField.setBounds(115, 60, 200, 25);
+		
+		_searchButton = new JButton("Search");
+		_searchButton.addActionListener(this);
+		_downloadFrame.getContentPane().add(_searchButton);
+		_searchButton.setBounds(115, 100, 100, 25);
+		
+		_downloadFrame.setVisible(true);
+	}
+	
 	/**
 	 * Action listener for the buttons in the main gui
 	 * as well as the button in the login gui.
@@ -296,6 +358,47 @@ public class Client implements ActionListener
 					_messageField.setText("");
 					_messageField.requestFocus();
 				}
+			}
+		}
+		else if (e.getSource() == _shareButton)
+		{
+	        int returnValue = _fileBrowser.showOpenDialog(null);
+	        
+	        if (returnValue == JFileChooser.APPROVE_OPTION)
+	        {
+				try
+				{
+					out = new PrintWriter(new FileWriter("shared.txt", true));
+				}
+				catch (IOException e1)
+				{
+					e1.printStackTrace();
+				}
+	        	
+	        	File selectedFile = _fileBrowser.getSelectedFile();
+	        	String path = selectedFile.getPath();
+	        	String name = selectedFile.getName();;
+	        	
+	        	out.print(name + " && " + path + "\n");
+	        	out.flush();
+	        	out.close();
+	        }
+		}
+		else if (e.getSource() == _downloadButton)
+		{
+			buildDownloadGUI();
+		}
+		else if (e.getSource() == _searchButton)
+		{
+			if (!_fileField.getText().equals(""))
+			{
+				Message search = new Message(_userName, "all", _fileField.getText().trim());
+				ClientThread.Send(search);
+				_downloadFrame.dispose();
+			}
+			else
+			{
+				JOptionPane.showMessageDialog(null, "Please enter a filename.");
 			}
 		}
 	}
