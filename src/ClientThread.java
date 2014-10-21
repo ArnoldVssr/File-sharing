@@ -33,16 +33,13 @@ public class ClientThread extends Thread
 	private String _filePath = "";
 	int _comPort = -1;
 	private String _fileKey = "";
-	
-	private SenderThread _sending;
-	private ReceiverThread _receiving;
-	
-	
+		
 	//relog gui
 	private JFrame _relogFrame;
 	private JLabel _nameLabel;
 	private JTextField _nameField;
 	private JButton _confirmButton;
+	private JLabel _relogHeader;
 	
 	private JFrame frame;
 	
@@ -90,6 +87,7 @@ public class ClientThread extends Thread
 			
 			while (state == 200)
 			{
+				JOptionPane.showMessageDialog(null, "Username already is use!");
 				buildRelog();
 				state = _socket.getInputStream().read();
 				System.out.println(state);
@@ -186,23 +184,35 @@ public class ClientThread extends Thread
 						_fileName = data[1];
 						_filePath = data[2];
 						_comPort = Integer.parseInt(data[3]);
+						System.out.println("*******SENDER PORT: " + _comPort);
 						_fileKey = data[4];
 
 						String prompt = "Upload " + _fileName + " to " + _person + "?";
 						int reply = JOptionPane.showConfirmDialog(null, prompt, "Upload confirmation", JOptionPane.YES_NO_OPTION);
 				        
 						if (reply == JOptionPane.YES_OPTION)
-				        {				        	
+				        {				    
+							File file = new File(_filePath);
+							long fileSize = file.length();
+							
+							ArrayList<String> metaData = new ArrayList<String>();
+							metaData.add("" + _comPort);
+							metaData.add("" + fileSize);
+							
+							_sendBuf = toByteArray(metaData.toArray());
+							
 				        	System.out.println("accepted");
 				        	_socket.getOutputStream().write(Message.ACCEPT);
 							_socket.getOutputStream().flush();
 							
-							_sending = new SenderThread(_fileName, _filePath, _comPort, _fileKey);
-							_sending.start();
+				        	_socket.getOutputStream().write(_sendBuf);
+							_socket.getOutputStream().flush();
+							
+							Client._sending = new SenderThread(_fileName, _filePath, _comPort, _fileKey);
+							Client._sending.start();
 				        }
 				        else 
 				        {
-				        	//send false
 				        	System.out.println("declined");
 				        	_socket.getOutputStream().write(Message.DECLINE);
 							_socket.getOutputStream().flush();
@@ -211,18 +221,34 @@ public class ClientThread extends Thread
 					else if (state == Message.ACCEPT)
 					{
 						System.out.println("doing accept");
-						_receiving = new ReceiverThread(_fileName, _hostname, 3001, _fileKey);
-						try {
+						long fileSize = 0;
+						int port = -1;
+						
+						_fileKey = Client._key;
+						_socket.getInputStream().read(_recBuf);
+	        			Object[] data = (Object[]) toObject(_recBuf);
+	        			
+	        			port = Integer.parseInt((String) data[0]);
+	        			fileSize = Long.parseLong((String) data[1]);
+	        			
+	        			System.out.println("*******RECV PORT: " + port);
+	        			
+	        			Client._receiving = new ReceiverThread(_fileName, _hostname, port, _fileKey, fileSize);
+						
+						try
+						{
 							Thread.sleep(300);
-						} catch (InterruptedException e) {
-							// TODO Auto-generated catch block
+						}
+						catch (InterruptedException e)
+						{
 							e.printStackTrace();
 						}
-						_receiving.start();
+						Client._receiving.start();
 					}
-					else if (state == Message.DC)
+					else if (state == Message.DECLINE)
 					{
 						System.out.println("doing decline");
+						JOptionPane.showMessageDialog(null, "File transfer denied.");
 					}
 					else if (state == Message.DC)
 					{
@@ -314,7 +340,6 @@ public class ClientThread extends Thread
 					_fileName = source.getSelectedValue().toString();
 		            int sel = source.getSelectedIndex();
 		            ClientThread.selected = sel;
-		            System.out.println("you want: " + sel);
 	            }
 				
 			}
@@ -346,12 +371,16 @@ public class ClientThread extends Thread
 		
 		_nameLabel = new JLabel("Username:");
 		_relogFrame.getContentPane().add(_nameLabel);
-		_nameLabel.setBounds(50, 50, 100, 25);
+		_nameLabel.setBounds(20, 50, 100, 25);
+		
+		_relogHeader = new JLabel("Please enter new username.");
+		_relogFrame.getContentPane().add(_relogHeader);
+		_relogHeader.setBounds(35, 10, 250, 25);
 		
 		
 		_nameField = new JTextField(30);
 		_relogFrame.getContentPane().add(_nameField);
-		_nameField.setBounds(100, 50, 100, 25);
+		_nameField.setBounds(105, 50, 150, 25);
 		
 		_confirmButton = new JButton("Confirm");
 		_confirmButton.addActionListener(
@@ -381,7 +410,7 @@ public class ClientThread extends Thread
 					}
 				});
 		_relogFrame.getContentPane().add(_confirmButton);
-		_confirmButton.setBounds(50, 100, 100, 25);
+		_confirmButton.setBounds(105, 100, 100, 25);
 		
 		_relogFrame.setVisible(true);
 	}
@@ -404,28 +433,32 @@ public class ClientThread extends Thread
 			if (message.getRecipient().equalsIgnoreCase("") &&
 				message.getMessage().equalsIgnoreCase("%BYE%"))
 			{
+				System.out.println("sent BYE");
 				_socket.getOutputStream().write(Message.BYE);
 			}
 			//lobby message
 			else if (message.getRecipient().equalsIgnoreCase(""))
 			{
+				System.out.println("sent LOBBY");
 				_socket.getOutputStream().write(Message.LOBBY);
 			}
 			//search request
 			else if (message.getRecipient().equalsIgnoreCase("all"))
 			{
+				System.out.println("sent SEARCH");
 				_socket.getOutputStream().write(Message.SEARCH);
 			}
 			//answer request
 			else if (message.getRecipient().equalsIgnoreCase("server") &&
 					 message.getOrigin().equalsIgnoreCase("none"))
 			{
-				System.out.println("SENT CHOICE");
+				System.out.println("sent CHOICE");
 				_socket.getOutputStream().write(Message.CHOICE);
 			}
 			//whisper message
 			else
 			{
+				System.out.println("sent WHISPER");
 				_socket.getOutputStream().write(Message.WHISPER);
 			}
 			_socket.getOutputStream().write(_sendBuf);

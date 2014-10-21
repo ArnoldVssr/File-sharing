@@ -27,26 +27,32 @@ public class SenderThread extends Thread
 		
 		try
 		{
-			System.out.println("sendPort: " + _port);
 			_serverSocket = new ServerSocket(_port);
-			System.out.println("listening");
 			_client = _serverSocket.accept();
-			System.out.println("connected");
+			System.out.println("sender key: " + _key);
 			DataInputStream fileInputStream = new DataInputStream(new FileInputStream(_path));
 				
 			byte[] buffer = new byte[65536];
 			int number;
-			//double total = 0;
+			double total = 0;
 			while ((number = fileInputStream.read(buffer)) != -1)
 			{
-				//double prog = (number / (double) fileSize);
-				//total = total + (prog * 100);
+				double prog = (number / (double) fileSize);
+				total = total + (prog * 100);
 				//System.out.println(total + "%");
+				
+				Client._uploadBar.setValue((int) total);
+				Client._uploadBar.setStringPainted(true);
+				
 			    _client.getOutputStream().write(buffer, 0, number);
 			}
 	
+				Client._chatLog.append("( done uploading " + _file +" )\n");
 				_client.getOutputStream().close();
+				_serverSocket.close();
 				fileInputStream.close();
+				
+				Client._uploadBar.setValue(0);
 		}
 		catch (Exception e)
 		{

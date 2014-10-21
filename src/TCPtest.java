@@ -1,3 +1,6 @@
+import java.awt.BorderLayout;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -7,6 +10,17 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.*;
 
+import javax.swing.DefaultListModel;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JOptionPane;
+import javax.swing.JScrollPane;
+import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 
 public class TCPtest 
 {
@@ -20,11 +34,117 @@ public class TCPtest
 	private static String fileName = "wolf-597-1280x800.jpg";
 	//private static String fileName = "Asking Alexandria - A Lesson Never Learned.mp3";
 	//private static String fileName = "bates1.mkv";
+
+	//relog gui
+	private JFrame _relogFrame;
+	private JLabel _nameLabel;
+	private JTextField _nameField;
+	private JButton _confirmButton;
+	private JLabel _relogHeader;
+	
+	public void buildRelog()
+	{
+		_relogFrame = new JFrame();
+		_relogFrame.setSize(300, 200);
+		_relogFrame.setResizable(false);
+		_relogFrame.setLayout(null);
+		_relogFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		
+		_nameLabel = new JLabel("Username:");
+		_relogFrame.getContentPane().add(_nameLabel);
+		_nameLabel.setBounds(20, 50, 100, 25);
+		
+		_relogHeader = new JLabel("Please enter new username.");
+		_relogFrame.getContentPane().add(_relogHeader);
+		_relogHeader.setBounds(35, 10, 250, 25);
+		
+		
+		_nameField = new JTextField(30);
+		_relogFrame.getContentPane().add(_nameField);
+		_nameField.setBounds(105, 50, 150, 25);
+		
+		_confirmButton = new JButton("Confirm");
+		_confirmButton.addActionListener(
+				new java.awt.event.ActionListener()
+				{
+					public void actionPerformed(java.awt.event.ActionEvent event)
+					{
+						
+						if (_confirmButton.getText().equalsIgnoreCase("Poes"))
+						{
+							_confirmButton.setText("Confirm");
+						}
+						else
+						{
+							_confirmButton.setText("Poes");
+						}
+						//_relogFrame.setVisible(false);
+						//_relogFrame.getContentPane().add(_confirmButton);
+						//_confirmButton.setBounds(105, 100, 100, 25);
+						//_relogFrame.setVisible(true);
+						
+						
+					}
+				});
+		_relogFrame.getContentPane().add(_confirmButton);
+		_confirmButton.setBounds(105, 100, 100, 25);
+		
+		_relogFrame.setVisible(true);
+	}
 	
 	public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException
 	{
 		
-		File file = new File(fileToSend);
+		TCPtest mal = new TCPtest();
+		mal.buildRelog();
+		
+		
+		
+		
+		
+		
+		
+		/*
+		 * 		_uploadBar.addMouseListener(
+				new MouseAdapter() 
+				{            
+					public void mouseClicked(MouseEvent e)
+					{
+						if (_uploadBar.getValue() > 0)
+						{
+							if (_isUploadPaused == false)
+							{
+								try
+								{
+									_sending.wait();
+								}
+								catch (InterruptedException e1)
+								{
+									e1.printStackTrace();
+								}
+								_isUploadPaused = true;
+							}
+							else
+							{
+								_sending.notify();
+								_isUploadPaused = false;
+							}
+						}
+					}                                     
+				});
+		 */
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		/*File file = new File(fileToSend);
 		long fileSize = file.length();
 		if (args[0].equals("1"))
 		{
@@ -71,7 +191,7 @@ public class TCPtest
 			fileStream.close();
 			socketStream.close();
 			
-		}
+		}*/
 	}
 	
 	

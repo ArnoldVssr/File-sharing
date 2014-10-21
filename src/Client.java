@@ -1,4 +1,3 @@
-import java.awt.BorderLayout;
 import java.awt.event.*;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -24,8 +23,12 @@ public class Client implements ActionListener
 	private String _hostName = "";
 	private String _portNumber = "";
 	private PrintWriter _out;
-	private String _key = "";
+	public static String _key = "";
 	private SecureRandom _random = new SecureRandom();
+	public static boolean _isUploadPaused = false;
+	public static boolean _isDownloadPaused = false;
+	public static SenderThread _sending;
+	public static ReceiverThread _receiving;
 	
 	//login gui
 	public static JFrame _loginFrame;
@@ -59,9 +62,9 @@ public class Client implements ActionListener
 	private JScrollPane _onlineScroller;
     private JFileChooser _fileBrowser;
     private JLabel _uploadLabel;
-    private JProgressBar _uploadBar;
+    public static JProgressBar _uploadBar;
     private JLabel _downloadLabel;
-    private JProgressBar _downloadBar;
+    public static JProgressBar _downloadBar;
     public static JList _userList;
     public static JTextArea _chatLog;
 	
@@ -206,7 +209,7 @@ public class Client implements ActionListener
 		_mainFrame.getContentPane().add(_uploadLabel);
 		_uploadLabel.setBounds(50, 350, 340, 25);
 		
-		_uploadBar = new JProgressBar(0, 100);
+		_uploadBar = new JProgressBar(0, 100);		
 		_uploadBar.setValue(0);
 		_uploadBar.setStringPainted(true);
 		_mainFrame.getContentPane().add(_uploadBar);
@@ -395,7 +398,6 @@ public class Client implements ActionListener
 		}
 		else if (e.getSource() == _downloadButton)
 		{
-			
 			buildDownloadGUI();
 		}
 		else if (e.getSource() == _searchButton)
