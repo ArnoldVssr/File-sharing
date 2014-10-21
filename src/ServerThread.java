@@ -16,8 +16,9 @@ public class ServerThread extends Thread
 	private static byte[] _sendBuf = null;
 	private static byte[] _recBuf = null;
     private static User _currentUser = new User();
-    private static String fileToFind = "";
-    private static String personToSend = "";
+    private static String _fileToFind = "";
+    private static String _sendKey = "";
+    private static String _personToSend = "";
     public static final class Lock { }
     public final static Object lock = new Lock();    
 	
@@ -144,9 +145,15 @@ public class ServerThread extends Thread
         			_socket.getInputStream().read(_recBuf);
         			Message Temp = (Message) toObject(_recBuf);
         			
-        			Server._serverLog.append(Temp.getOrigin() + " -> searching for " + Temp.getMessage() + ".\n");
-        			fileToFind = Temp.getMessage();
-        			personToSend = Temp.getOrigin();
+        			System.out.println(Temp.getMessage());
+        			String[] temp = Temp.getMessage().split("\\$\\$");
+        			String expression = temp[0];
+        			String key = temp[1];
+        			
+        			Server._serverLog.append(Temp.getOrigin() + " -> searching for " + expression + ".\n");
+        			_fileToFind = expression;
+        			_personToSend = Temp.getOrigin();
+        			_sendKey = key;
         			
     				for(Map.Entry<String, Socket> entry: Server.Maptest.entrySet())
     				{
@@ -159,6 +166,7 @@ public class ServerThread extends Thread
         		}
         		else if (state == Message.TEXT)
         		{
+        			System.out.println("doing text");
         			synchronized (lock)
         			{
 						while (Server.writeBusy)
@@ -167,19 +175,22 @@ public class ServerThread extends Thread
 						}
 						Server.counter++;
 						_socket.getInputStream().read(_recBuf);
-	        			Object[] lines = (Object[]) toObject(_recBuf);
-	        			System.out.println("got data");
-	        			System.out.println("searching for: " + fileToFind);
-	        			System.out.println("forwarding to: " + personToSend);
+	        			Object[] lines = (Object[]) toObject(_recBuf);       			
+	        			
 	        			for (int i = 0; i < lines.length; i++)
 	        			{
 	        				//wolf-597-1280x800.jpg && /home/arnold/Downloads/wolf-597-1280x800.jpg
 	        				String current = (String) lines[i];
-	        				String[] temp = current.split("&&");
-	        				if (current.contains(fileToFind))
+	        				String[] temp = current.split("\\&\\&");
+	        				
+	        				System.out.println(_fileToFind);
+	        				System.out.println(current.contains(_fileToFind));
+	        				if (current.contains(_fileToFind))
 	        				{
+	        					System.out.println("in if");
 	        					Server.resultsPath.add(current);
 	        					Server.results.add(temp[0]);
+	        					Server.resultsSocket.put(temp[0], _socket);
 	        				}
 	        			}
 						Server.writeBusy = false;
@@ -190,7 +201,7 @@ public class ServerThread extends Thread
         			{
         				System.out.println("forwarding results...");
         				
-        				Socket returnResult = Server.Maptest.get(personToSend);
+        				Socket returnResult = Server.Maptest.get(_personToSend);
         				
         				_sendBuf = toByteArray(Server.results.toArray());
         				returnResult.getOutputStream().write(Message.RESULTS);
@@ -201,6 +212,84 @@ public class ServerThread extends Thread
         				System.out.println("sent results");
         				
         			}
+        		}
+        		else if (state == Message.CHOICE)
+        		{
+        			System.out.println("choice");
+        			int index = -1;
+        			_socket.getInputStream().read(_recBuf);
+        			Message answer = (Message) toObject(_recBuf);
+        			
+        			index = Integer.parseInt(answer.getMessage()); 
+        			System.out.println(index);
+        			
+        			System.out.println(_personToSend + " wants " + Server.results.get(index));
+        			System.out.println("which is " + Server.resultsPath.get(index));
+        			
+        			if (Server.busyOn3001 == false)
+        			{
+        				//use 3001
+        				StringBuilder body = new StringBuilder();
+        				body.append(_personToSend);
+        				body.append("&&");
+        				body.append(Server.resultsPath.get(index));
+        				body.append("&&");
+        				body.append("3001");
+        				body.append("&&");
+        				body.append(_sendKey);
+        				
+        				Message message = new Message(_personToSend, "me", body.toString());
+        				
+        				Socket temp = Server.resultsSocket.get(Server.results.get(index));
+        				
+        				_sendBuf = toByteArray(message);
+            			temp.getOutputStream().write(Message.TEST);
+            			temp.getOutputStream().flush();
+            			
+            			temp.getOutputStream().write(_sendBuf);
+            			temp.getOutputStream().flush();
+        			}
+        			else if (Server.busyOn3002 == false)
+        			{
+        				//use 3002
+        				StringBuilder body = new StringBuilder();
+        				body.append(Server.resultsPath.get(index));
+        				body.append("&&");
+        				body.append("3002");
+        				body.append("&&");
+        				body.append(_sendKey);
+        				
+        				Message message = new Message(_personToSend, "me", body.toString());
+        				
+        				Socket temp = Server.resultsSocket.get(Server.results.get(index));
+        				
+        				_sendBuf = toByteArray(message);
+            			temp.getOutputStream().write(Message.TEST);
+            			temp.getOutputStream().flush();
+            			
+            			temp.getOutputStream().write(_sendBuf);
+            			temp.getOutputStream().flush();
+        			}
+        			else
+        			{
+        				//try again later..
+        			}       			
+        		}
+        		else if (state == Message.ACCEPT)
+        		{
+        			System.out.println("doing accpet");
+        			Socket returnResult = Server.Maptest.get(_personToSend);
+    				        			
+    				returnResult.getOutputStream().write(Message.ACCEPT);
+    				returnResult.getOutputStream().flush();
+        		}
+        		else if (state == Message.DECLINE)
+        		{
+        			System.out.println("doing decline");
+        			Socket returnResult = Server.Maptest.get(_personToSend);
+        			
+    				returnResult.getOutputStream().write(Message.ACCEPT);
+    				returnResult.getOutputStream().flush();
         		}
         		else if (state == Message.HASHSET)
         		{

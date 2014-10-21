@@ -22,10 +22,14 @@ public class Server
     public static ArrayList<String> usernames = new  ArrayList<String>();
     public static ArrayList<String> resultsPath = new  ArrayList<String>();
     public static ArrayList<String> results = new  ArrayList<String>();
+    public static Map<String, Socket> resultsSocket = new  HashMap<String, Socket>();
 	public static int prevLen = 0;
 	public static int curLen = 0;
 	public static boolean writeBusy = false;
 	public static int counter = 0;
+	
+	public static boolean busyOn3001 = false;
+	public static boolean busyOn3002 = false;
 	
     
 	public static JFrame _serverFrame = new JFrame();

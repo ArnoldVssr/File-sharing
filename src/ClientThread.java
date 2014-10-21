@@ -18,8 +18,6 @@ public class ClientThread extends Thread
 {
 	//global variables
 	private static Socket _socket = null;
-	private static ServerSocket _sendSocket;
-	private static Socket _recieveSocket;
 	private static byte[] _sendBuf = null;
 	private byte[] _recBuf = null;
 	public User _user = new User();
@@ -28,12 +26,25 @@ public class ClientThread extends Thread
 	public String _portnum = "";
 	private InetAddress _address;
 	private int _port;
+	private static int selected = -1;
+	
+	private String _person = "";
+	private String _fileName = "";
+	private String _filePath = "";
+	int _comPort = -1;
+	private String _fileKey = "";
+	
+	private SenderThread _sending;
+	private ReceiverThread _receiving;
+	
 	
 	//relog gui
 	private JFrame _relogFrame;
 	private JLabel _nameLabel;
 	private JTextField _nameField;
 	private JButton _confirmButton;
+	
+	private JFrame frame;
 	
 	/**
 	 * constuctor to start a ClientThread
@@ -151,6 +162,7 @@ public class ClientThread extends Thread
 					}
 					else if (state == Message.RESULTS)
 					{
+						System.out.println("doing results");
 						_socket.getInputStream().read(_recBuf);
 	        			Object[] lines = (Object[]) toObject(_recBuf);
 	        			
@@ -161,6 +173,56 @@ public class ClientThread extends Thread
 	        				mal[i] = (String) lines[i];
 	        			}
 	        			buildResultGUI(mal);
+					}
+					else if (state == Message.TEST)
+					{
+						System.out.println("doing test");
+						_socket.getInputStream().read(_recBuf);
+						rec = (Message) toObject(_recBuf);
+						
+						String[] data = rec.getMessage().split("\\&\\&");
+						
+						_person = data[0];
+						_fileName = data[1];
+						_filePath = data[2];
+						_comPort = Integer.parseInt(data[3]);
+						_fileKey = data[4];
+
+						String prompt = "Upload " + _fileName + " to " + _person + "?";
+						int reply = JOptionPane.showConfirmDialog(null, prompt, "Upload confirmation", JOptionPane.YES_NO_OPTION);
+				        
+						if (reply == JOptionPane.YES_OPTION)
+				        {				        	
+				        	System.out.println("accepted");
+				        	_socket.getOutputStream().write(Message.ACCEPT);
+							_socket.getOutputStream().flush();
+							
+							_sending = new SenderThread(_fileName, _filePath, _comPort, _fileKey);
+							_sending.start();
+				        }
+				        else 
+				        {
+				        	//send false
+				        	System.out.println("declined");
+				        	_socket.getOutputStream().write(Message.DECLINE);
+							_socket.getOutputStream().flush();
+				        }
+					}
+					else if (state == Message.ACCEPT)
+					{
+						System.out.println("doing accept");
+						_receiving = new ReceiverThread(_fileName, _hostname, 3001, _fileKey);
+						try {
+							Thread.sleep(300);
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+						_receiving.start();
+					}
+					else if (state == Message.DC)
+					{
+						System.out.println("doing decline");
 					}
 					else if (state == Message.DC)
 					{
@@ -210,8 +272,30 @@ public class ClientThread extends Thread
 	
 	public void buildResultGUI(String[] results)
 	{
-		JFrame frame = new JFrame("Results of search");
-
+		frame = new JFrame("Results of search");
+		JButton _acceptButton = new JButton("Accept");
+		
+		_acceptButton.addActionListener(
+				new java.awt.event.ActionListener()
+				{
+					public void actionPerformed(java.awt.event.ActionEvent event)
+					{
+						int choice = -1;
+						choice = ClientThread.selected;
+						
+						if (choice != -1)
+						{
+							Message answer = new Message("none", "server", "" + choice);
+							ClientThread.Send(answer);
+							frame.setVisible(false);
+						}
+						else
+						{
+							JOptionPane.showMessageDialog(null, "Please select a result to download.");
+						}
+					}
+				});
+		
 	    DefaultListModel model = new DefaultListModel();
 	    model.ensureCapacity(results.length);
 	    for (int i = 0; i < results.length; i++)
@@ -227,18 +311,20 @@ public class ClientThread extends Thread
 			{
 				if (!e.getValueIsAdjusting()) {
 					JList source = (JList)e.getSource();
-		            String selected = source.getSelectedValue().toString();
-		            System.out.println("you want: " + selected);
+					_fileName = source.getSelectedValue().toString();
+		            int sel = source.getSelectedIndex();
+		            ClientThread.selected = sel;
+		            System.out.println("you want: " + sel);
 	            }
 				
 			}
 		};
 	    jlist2.addListSelectionListener(listener);
-
 	    
 	    JScrollPane scrollPane2 = new JScrollPane(jlist2);
 	    frame.add(scrollPane2, BorderLayout.CENTER);
-
+	    frame.add(_acceptButton, BorderLayout.PAGE_END);
+	    
 	    frame.setSize(400, 350);
 	    frame.setVisible(true);
 	}
@@ -329,6 +415,13 @@ public class ClientThread extends Thread
 			else if (message.getRecipient().equalsIgnoreCase("all"))
 			{
 				_socket.getOutputStream().write(Message.SEARCH);
+			}
+			//answer request
+			else if (message.getRecipient().equalsIgnoreCase("server") &&
+					 message.getOrigin().equalsIgnoreCase("none"))
+			{
+				System.out.println("SENT CHOICE");
+				_socket.getOutputStream().write(Message.CHOICE);
 			}
 			//whisper message
 			else

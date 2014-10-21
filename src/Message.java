@@ -28,6 +28,10 @@ public class Message implements Serializable
     public static final int SHARED = 12;
     public static final int TEXT = 13;
     public static final int RESULTS = 14;
+    public static final int CHOICE = 15;
+    public static final int TEST = 16;
+    public static final int ACCEPT = 17;
+    public static final int DECLINE = 18;
     
 	
 	public Message()

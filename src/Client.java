@@ -5,6 +5,8 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.math.BigInteger;
+import java.security.SecureRandom;
 
 import javax.swing.*;
 
@@ -21,7 +23,9 @@ public class Client implements ActionListener
 	public static String _userName = "";
 	private String _hostName = "";
 	private String _portNumber = "";
-	private PrintWriter out;
+	private PrintWriter _out;
+	private String _key = "";
+	private SecureRandom _random = new SecureRandom();
 	
 	//login gui
 	public static JFrame _loginFrame;
@@ -81,14 +85,19 @@ public class Client implements ActionListener
 	{
 		Client test = new Client();
 		try {
-			test.out = new PrintWriter("shared.txt");
-			test.out.close();
+			test._out = new PrintWriter("shared.txt");
+			test._out.close();
 		} 
 		catch (FileNotFoundException e)
 		{
 			e.printStackTrace();
 		}
 		test.buildMain();
+	}
+	
+	public String nextSessionId()
+	{
+		return new BigInteger(130, _random).toString(32);
 	}
 	
 	/**
@@ -368,7 +377,7 @@ public class Client implements ActionListener
 	        {
 				try
 				{
-					out = new PrintWriter(new FileWriter("shared.txt", true));
+					_out = new PrintWriter(new FileWriter("shared.txt", true));
 				}
 				catch (IOException e1)
 				{
@@ -378,21 +387,23 @@ public class Client implements ActionListener
 	        	File selectedFile = _fileBrowser.getSelectedFile();
 	        	String path = selectedFile.getPath();
 	        	String name = selectedFile.getName();;
-	        	
-	        	out.print(name + " && " + path + "\n");
-	        	out.flush();
-	        	out.close();
+	        	_chatLog.append("( shared: " + name +" )\n");
+	        	_out.print(name + "&&" + path + "\n");
+	        	_out.flush();
+	        	_out.close();
 	        }
 		}
 		else if (e.getSource() == _downloadButton)
 		{
+			
 			buildDownloadGUI();
 		}
 		else if (e.getSource() == _searchButton)
 		{
 			if (!_fileField.getText().equals(""))
 			{
-				Message search = new Message(_userName, "all", _fileField.getText().trim());
+				_key = nextSessionId();
+				Message search = new Message(_userName, "all", _fileField.getText().trim() + "$$" + _key);
 				ClientThread.Send(search);
 				_downloadFrame.dispose();
 			}

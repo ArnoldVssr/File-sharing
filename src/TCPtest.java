@@ -28,7 +28,7 @@ public class TCPtest
 		long fileSize = file.length();
 		if (args[0].equals("1"))
 		{
-			serverSocket = new ServerSocket();
+			serverSocket = new ServerSocket(3000);
 			client = serverSocket.accept();
 			DataInputStream fileInputStream = new DataInputStream(new FileInputStream(fileToSend));
 			
