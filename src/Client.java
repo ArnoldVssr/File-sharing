@@ -209,7 +209,29 @@ public class Client implements ActionListener
 		_mainFrame.getContentPane().add(_uploadLabel);
 		_uploadLabel.setBounds(50, 350, 340, 25);
 		
-		_uploadBar = new JProgressBar(0, 100);		
+		_uploadBar = new JProgressBar(0, 100);
+		_uploadBar.addMouseListener(
+				new MouseAdapter() 
+				{            
+					public void mouseClicked(MouseEvent e)
+					{
+						if (_uploadBar.getValue() > 0)
+						{
+							if (_isUploadPaused == false)
+							{
+								_sending.suspend();
+								_isUploadPaused = true;
+								System.out.println("paused");
+							}
+							else
+							{
+								_sending.resume();
+								_isUploadPaused = false;
+								System.out.println("resuming");
+							}
+						}
+					}                                     
+				});
 		_uploadBar.setValue(0);
 		_uploadBar.setStringPainted(true);
 		_mainFrame.getContentPane().add(_uploadBar);
@@ -220,6 +242,28 @@ public class Client implements ActionListener
 		_downloadLabel.setBounds(50, 395, 340, 25);
         
 		_downloadBar = new JProgressBar(0, 100);
+		_downloadBar.addMouseListener(
+				new MouseAdapter() 
+				{            
+					public void mouseClicked(MouseEvent e)
+					{
+						if (_downloadBar.getValue() > 0)
+						{
+							if (_isDownloadPaused == false)
+							{
+								_receiving.suspend();
+								_isDownloadPaused = true;
+								System.out.println("paused");
+							}
+							else
+							{
+								_receiving.resume();
+								_isDownloadPaused = false;
+								System.out.println("resuming");
+							}
+						}
+					}                                     
+				});
 		_downloadBar.setValue(0);
 		_downloadBar.setStringPainted(true);
 		_mainFrame.getContentPane().add(_downloadBar);
